@@ -86,21 +86,14 @@ function resolveRound(state: PenaltyState): PenaltyState {
 
 // Use peerjs.com as broker but with our own deterministic peer IDs
 // so host and joiner can find each other reliably with a short 6-char code
+// PeerJS default cloud server (no custom host - uses peerjs.com cloud by default)
 const PEER_CONFIG = {
-  host: "0.peerjs.com",
-  port: 443,
-  path: "/",
-  secure: true,
   config: {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:global.stun.twilio.com:3478" },
-      {
-        urls: "turn:openrelay.metered.ca:80",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun.cloudflare.com:3478" },
       {
         urls: "turn:openrelay.metered.ca:443",
         username: "openrelayproject",
@@ -129,7 +122,7 @@ function generateRoomCode(): string {
 /** Convert a 6-char room code to a deterministic PeerJS peer ID.
  *  Host registers this ID; joiner connects to this same ID. */
 function roomCodeToPeerId(code: string): string {
-  return `odinm-penalty-${code.toUpperCase()}`;
+  return `om-p-${code.toUpperCase()}`;
 }
 
 function generatePlayerId(): string {
