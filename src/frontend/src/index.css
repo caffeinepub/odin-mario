@@ -1,0 +1,145 @@
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Figtree";
+  src: url("/assets/fonts/Figtree.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0.95 0.01 240;
+    --foreground: 0.12 0.02 240;
+    --card: 0.98 0.005 240;
+    --card-foreground: 0.12 0.02 240;
+    --popover: 0.98 0.005 240;
+    --popover-foreground: 0.12 0.02 240;
+    --primary: 0.55 0.22 25;
+    --primary-foreground: 0.98 0.01 25;
+    --secondary: 0.45 0.2 155;
+    --secondary-foreground: 0.98 0.01 155;
+    --muted: 0.9 0.02 240;
+    --muted-foreground: 0.5 0.05 240;
+    --accent: 0.8 0.18 85;
+    --accent-foreground: 0.12 0.02 85;
+    --destructive: 0.55 0.22 25;
+    --destructive-foreground: 0.98 0.01 25;
+    --border: 0.85 0.02 240;
+    --input: 0.85 0.02 240;
+    --ring: 0.55 0.22 25;
+    --radius: 0.5rem;
+    --chart-1: 0.55 0.22 25;
+    --chart-2: 0.45 0.2 155;
+    --chart-3: 0.8 0.18 85;
+    --chart-4: 0.6 0.2 200;
+    --chart-5: 0.7 0.15 310;
+    --sidebar: 0.95 0.01 240;
+    --sidebar-foreground: 0.12 0.02 240;
+    --sidebar-primary: 0.55 0.22 25;
+    --sidebar-primary-foreground: 0.98 0.01 25;
+    --sidebar-accent: 0.9 0.02 240;
+    --sidebar-accent-foreground: 0.12 0.02 240;
+    --sidebar-border: 0.85 0.02 240;
+    --sidebar-ring: 0.55 0.22 25;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Figtree", sans-serif;
+  }
+
+  #root {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* Animated sky clouds for start screen */
+@keyframes cloud-drift-1 {
+  from {
+    transform: translateX(110vw);
+  }
+  to {
+    transform: translateX(-40vw);
+  }
+}
+@keyframes cloud-drift-2 {
+  from {
+    transform: translateX(110vw);
+  }
+  to {
+    transform: translateX(-50vw);
+  }
+}
+@keyframes cloud-drift-3 {
+  from {
+    transform: translateX(-30vw);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+
+.sky-cloud {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.75;
+}
+.sky-cloud::before,
+.sky-cloud::after {
+  content: "";
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+}
+.sky-cloud-body {
+  position: relative;
+  background: #fff;
+  border-radius: 50px;
+}
+
+@keyframes pulse-live {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
