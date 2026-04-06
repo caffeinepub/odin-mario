@@ -373,6 +373,8 @@ interface ChessPvPProps {
   playerAddress?: string;
 }
 
+// Use peerjs.com as broker but with our own deterministic peer IDs
+// so host and joiner can find each other reliably with a short 6-char code
 const PEER_CONFIG = {
   host: "0.peerjs.com",
   port: 443,
@@ -402,6 +404,22 @@ const PEER_CONFIG = {
   },
   debug: 0,
 };
+
+/** Generate a short 6-character room code (e.g. "AB3K7M") */
+function generateRoomCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+/** Convert a 6-char room code to a deterministic PeerJS peer ID.
+ *  Host registers this ID; joiner connects to this same ID. */
+function roomCodeToPeerId(code: string): string {
+  return `odinm-chess-${code.toUpperCase()}`;
+}
 
 function generatePlayerId() {
   return `Player${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -471,10 +489,18 @@ export default function ChessPvP({ onBack, playerAddress }: ChessPvPProps) {
     myColorRef.current = "w";
     setMyColor("w");
     lastStateRef.current = "";
-    const peer = new Peer(undefined, PEER_CONFIG);
+    // Generate a short code and register the EXACT peer ID so joiner can find us
+    const code = generateRoomCode();
+    const peerId = roomCodeToPeerId(code);
+    // Destroy any previous peer first
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+    const peer = new Peer(peerId, PEER_CONFIG);
     peerRef.current = peer;
-    peer.on("open", (id: string) => {
-      setRoomCode(id);
+    peer.on("open", () => {
+      setRoomCode(code);
       setPhase("waiting");
       phaseRef.current = "waiting";
       setLoading(false);
@@ -513,8 +539,16 @@ export default function ChessPvP({ onBack, playerAddress }: ChessPvPProps) {
       conn.on("error", (e: any) => setError(`Connection error: ${e}`));
     });
     peer.on("error", (e: any) => {
-      setError(`Failed to create room: ${e}`);
-      setLoading(false);
+      const msg = String(e);
+      if (msg.includes("unavailable-id") || msg.includes("ID is taken")) {
+        // Code collision, auto-retry with a new code
+        peer.destroy();
+        peerRef.current = null;
+        handleCreateRoom();
+      } else {
+        setError(`Failed to create room: ${msg}`);
+        setLoading(false);
+      }
     });
   }
 
@@ -534,14 +568,21 @@ export default function ChessPvP({ onBack, playerAddress }: ChessPvPProps) {
       generatePlayerId();
     setLoading(true);
     setError("");
-    const code = joinCode.trim();
+    const code = joinCode.trim().toUpperCase();
     myColorRef.current = "b";
     setMyColor("b");
     lastStateRef.current = "";
+    // Destroy any previous peer first
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
     const peer = new Peer(undefined, PEER_CONFIG);
     peerRef.current = peer;
     peer.on("open", () => {
-      const conn = peer.connect(code, { reliable: true } as any);
+      // Connect to the host's deterministic peer ID derived from the room code
+      const hostPeerId = roomCodeToPeerId(code);
+      const conn = peer.connect(hostPeerId, { reliable: true } as any);
       connRef.current = conn;
       let joined = false;
       const joinTimeout = setTimeout(() => {
@@ -591,8 +632,15 @@ export default function ChessPvP({ onBack, playerAddress }: ChessPvPProps) {
         setLoading(false);
       });
     });
-    peer.on("error", () => {
-      setError("Room not found or connection failed.");
+    peer.on("error", (e: any) => {
+      const msg = String(e);
+      if (msg.includes("peer-unavailable")) {
+        setError(
+          "Room not found. Make sure the code is correct and the host is still waiting.",
+        );
+      } else {
+        setError(`Connection failed: ${msg}`);
+      }
       setLoading(false);
     });
   }
@@ -967,8 +1015,15 @@ export default function ChessPvP({ onBack, playerAddress }: ChessPvPProps) {
                 data-ocid="chesspvp.room_code.input"
                 placeholder="ENTER ROOM CODE"
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                maxLength={36}
+                onChange={(e) =>
+                  setJoinCode(
+                    e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 6),
+                  )
+                }
+                maxLength={6}
                 style={{
                   width: "100%",
                   background: "rgba(255,255,255,0.08)",

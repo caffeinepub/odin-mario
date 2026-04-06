@@ -84,6 +84,8 @@ function resolveRound(state: PenaltyState): PenaltyState {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Use peerjs.com as broker but with our own deterministic peer IDs
+// so host and joiner can find each other reliably with a short 6-char code
 const PEER_CONFIG = {
   host: "0.peerjs.com",
   port: 443,
@@ -113,6 +115,22 @@ const PEER_CONFIG = {
   },
   debug: 0,
 };
+
+/** Generate a short 6-character room code (e.g. "AB3K7M") */
+function generateRoomCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+/** Convert a 6-char room code to a deterministic PeerJS peer ID.
+ *  Host registers this ID; joiner connects to this same ID. */
+function roomCodeToPeerId(code: string): string {
+  return `odinm-penalty-${code.toUpperCase()}`;
+}
 
 function generatePlayerId(): string {
   return `player_${Math.random().toString(36).slice(2, 8)}`;
@@ -191,11 +209,19 @@ export default function PenaltyShootoutPvP({
     setLoading(true);
     setError("");
     isP1Ref.current = true;
-    const peer = new Peer(undefined, PEER_CONFIG);
+    // Generate a short code and register the EXACT peer ID so joiner can find us
+    const code = generateRoomCode();
+    const peerId = roomCodeToPeerId(code);
+    // Destroy any previous peer first
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+    const peer = new Peer(peerId, PEER_CONFIG);
     peerRef.current = peer;
 
-    peer.on("open", (id: string) => {
-      setRoomCode(id);
+    peer.on("open", () => {
+      setRoomCode(code);
       setPhase("waiting");
       phaseRef.current = "waiting";
       setLoading(false);
@@ -221,8 +247,16 @@ export default function PenaltyShootoutPvP({
     });
 
     peer.on("error", (e: any) => {
-      setError(`Failed to create room: ${e}`);
-      setLoading(false);
+      const msg = String(e);
+      if (msg.includes("unavailable-id") || msg.includes("ID is taken")) {
+        // Code collision, auto-retry with a new code
+        peer.destroy();
+        peerRef.current = null;
+        handleCreateRoom();
+      } else {
+        setError(`Failed to create room: ${msg}`);
+        setLoading(false);
+      }
     });
   }
 
@@ -241,13 +275,20 @@ export default function PenaltyShootoutPvP({
       generatePlayerId();
     setLoading(true);
     setError("");
-    const code = joinCode.trim();
+    const code = joinCode.trim().toUpperCase();
     isP1Ref.current = false;
+    // Destroy any previous peer first
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
     const peer = new Peer(undefined, PEER_CONFIG);
     peerRef.current = peer;
 
     peer.on("open", () => {
-      const conn = peer.connect(code, { reliable: true } as any);
+      // Connect to the host's deterministic peer ID derived from the room code
+      const hostPeerId = roomCodeToPeerId(code);
+      const conn = peer.connect(hostPeerId, { reliable: true } as any);
       connRef.current = conn;
       let joined = false;
       const joinTimeout = setTimeout(() => {
@@ -287,8 +328,15 @@ export default function PenaltyShootoutPvP({
       });
     });
 
-    peer.on("error", () => {
-      setError("Room not found or connection failed.");
+    peer.on("error", (e: any) => {
+      const msg = String(e);
+      if (msg.includes("peer-unavailable")) {
+        setError(
+          "Room not found. Make sure the code is correct and the host is still waiting.",
+        );
+      } else {
+        setError(`Connection failed: ${msg}`);
+      }
       setLoading(false);
     });
   }
@@ -548,9 +596,16 @@ export default function PenaltyShootoutPvP({
               data-ocid="penalty.input"
               type="text"
               placeholder="ENTER CODE"
-              maxLength={36}
+              maxLength={6}
               value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              onChange={(e) =>
+                setJoinCode(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "")
+                    .slice(0, 6),
+                )
+              }
               style={{
                 flex: 1,
                 background: "rgba(0,0,0,0.5)",
