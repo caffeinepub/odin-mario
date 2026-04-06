@@ -374,12 +374,30 @@ interface ChessPvPProps {
 }
 
 const PEER_CONFIG = {
+  host: "0.peerjs.com",
+  port: 443,
+  path: "/",
+  secure: true,
   config: {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:stun.relay.metered.ca:80" },
+      { urls: "stun:global.stun.twilio.com:3478" },
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
     ],
   },
   debug: 0,
@@ -523,18 +541,20 @@ export default function ChessPvP({ onBack, playerAddress }: ChessPvPProps) {
     const peer = new Peer(undefined, PEER_CONFIG);
     peerRef.current = peer;
     peer.on("open", () => {
-      const conn = peer.connect(code, undefined, { reliable: true });
+      const conn = peer.connect(code, { reliable: true } as any);
       connRef.current = conn;
+      let joined = false;
       const joinTimeout = setTimeout(() => {
-        if (loading) {
+        if (!joined) {
           setError(
             "Room not found. Make sure the code is correct and the host is still waiting.",
           );
           setLoading(false);
           peer.destroy();
         }
-      }, 15000);
+      }, 20000);
       conn.on("open", () => {
+        joined = true;
         clearTimeout(joinTimeout);
         setRoomCode(code);
         setLoading(false);
