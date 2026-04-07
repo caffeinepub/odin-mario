@@ -10,28 +10,44 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export interface ScoreEntry { 'score' : bigint, 'playerName' : string }
 export interface PvPRoom {
-  'roomCode' : string,
-  'player1' : string,
-  'player2' : string,
-  'gameType' : string,
-  'gameState' : string,
-  'currentTurn' : string,
   'status' : string,
   'winner' : string,
+  'currentTurn' : string,
+  'player1' : string,
+  'player2' : string,
+  'gameState' : string,
+  'gameType' : string,
+  'roomCode' : string,
+}
+export interface ScoreEntry { 'score' : bigint, 'playerName' : string }
+export interface TransformationInput {
+  'context' : Uint8Array,
+  'response' : http_request_result,
+}
+export interface TransformationOutput {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
+export interface http_header { 'value' : string, 'name' : string }
+export interface http_request_result {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
 }
 export interface _SERVICE {
   'clearLeaderboard' : ActorMethod<[], undefined>,
-  'getTop10Scores' : ActorMethod<[], Array<ScoreEntry>>,
-  'submitScore' : ActorMethod<[string, bigint], undefined>,
-  'getTokenStatsJson' : ActorMethod<[], string>,
   'createPvPRoom' : ActorMethod<[string, string, string], string>,
-  'joinPvPRoom' : ActorMethod<[string, string], boolean>,
-  'getPvPRoom' : ActorMethod<[string], [] | [PvPRoom]>,
-  'getWaitingRoom' : ActorMethod<[string, string], [] | [PvPRoom]>,
-  'updatePvPState' : ActorMethod<[string, string, string, string], boolean>,
   'finishPvPGame' : ActorMethod<[string, string], boolean>,
+  'getPvPRoom' : ActorMethod<[string], [] | [PvPRoom]>,
+  'getTokenStatsJson' : ActorMethod<[], string>,
+  'getTop10Scores' : ActorMethod<[], Array<ScoreEntry>>,
+  'getWaitingRoom' : ActorMethod<[string, string], [] | [PvPRoom]>,
+  'joinPvPRoom' : ActorMethod<[string, string], boolean>,
+  'submitScore' : ActorMethod<[string, bigint], undefined>,
+  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
+  'updatePvPState' : ActorMethod<[string, string, string, string], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

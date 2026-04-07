@@ -1,0 +1,54 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type ScoreEntry = 
+ record {
+   playerName: text;
+   score: nat;
+ };
+type PvPRoom = 
+ record {
+   currentTurn: text;
+   gameState: text;
+   gameType: text;
+   player1: text;
+   player2: text;
+   roomCode: text;
+   status: text;
+   winner: text;
+ };
+service : {
+  clearLeaderboard: () -> ();
+  createPvPRoom: (player1: text, gameType: text, initialState: text) ->
+   (text);
+  finishPvPGame: (code: text, winner: text) -> (bool);
+  getPvPRoom: (code: text) -> (opt PvPRoom) query;
+  getTokenStatsJson: () -> (text);
+  getTop10Scores: () -> (vec ScoreEntry) query;
+  getWaitingRoom: (gameType: text, excludePlayer: text) ->
+   (opt PvPRoom) query;
+  joinPvPRoom: (code: text, player2: text) -> (bool);
+  submitScore: (playerName: text, score: nat) -> ();
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+  updatePvPState: (code: text, playerAddr: text, newState: text, nextTurn:
+   text) -> (bool);
+}

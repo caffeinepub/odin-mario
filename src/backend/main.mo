@@ -1,11 +1,13 @@
 import Map "mo:core/Map";
 import Text "mo:core/Text";
-import Array "mo:core/Array";
-import Iter "mo:core/Iter";
 import Nat "mo:core/Nat";
-import Outcall "./http-outcalls/outcall";
+import Blob "mo:core/Blob";
+import Runtime "mo:core/Runtime";
+import IC "ic:aaaaa-aa";
 
 persistent actor {
+  // ── Types ──────────────────────────────────────────────────────────────
+
   type ScoreEntry = {
     playerName : Text;
     score : Nat;
@@ -22,9 +24,21 @@ persistent actor {
     winner : Text;
   };
 
+  // ── HTTP Outcall types (inlined from caffeineai-http-outcalls) ─────────
+
+  public type TransformationInput = {
+    context : Blob;
+    response : IC.http_request_result;
+  };
+  public type TransformationOutput = IC.http_request_result;
+
+  // ── State ──────────────────────────────────────────────────────────────
+
   let scores = Map.empty<Text, Nat>();
   let pvpRooms = Map.empty<Text, PvPRoom>();
   var roomCounter : Nat = 0;
+
+  // ── Room code generation ───────────────────────────────────────────────
 
   let ROOM_CHARS : [Char] = [
     'A','B','C','D','E','F','G','H',
@@ -48,45 +62,60 @@ persistent actor {
     Text.fromChar(natToRoomChar(n * 29 + 19))
   };
 
+  // ── Leaderboard ────────────────────────────────────────────────────────
+
   public shared func submitScore(playerName : Text, score : Nat) : async () {
     scores.add(playerName, score);
   };
 
   public shared func clearLeaderboard() : async () {
-    let keys = scores.keys().toArray();
-    for (key in keys.vals()) {
-      ignore scores.remove(key);
-    };
+    scores.clear();
   };
 
   public query func getTop10Scores() : async [ScoreEntry] {
     scores.entries().toArray().map(
-      func((playerName, score)) {
-        {
-          playerName;
-          score;
-        };
+      func((playerName, score) : (Text, Nat)) : ScoreEntry {
+        { playerName; score }
       }
     ).sort(
-      func(a, b) {
-        Nat.compare(b.score, a.score);
+      func(a : ScoreEntry, b : ScoreEntry) : { #less; #equal; #greater } {
+        Nat.compare(b.score, a.score)
       }
-    ).sliceToArray(0, 10);
+    ).sliceToArray(0, 10)
   };
 
-  public query func transform(input : Outcall.TransformationInput) : async Outcall.TransformationOutput {
-    Outcall.transform(input);
+  // ── HTTP Outcalls ──────────────────────────────────────────────────────
+
+  public query func transform(input : TransformationInput) : async TransformationOutput {
+    { input.response with headers = [] }
   };
 
   public func getTokenStatsJson() : async Text {
-    await Outcall.httpGetRequest(
-      "https://api.odin.fun/v1/token/2ip5",
-      [],
-      transform,
-    );
+    let headers = [{
+      name = "User-Agent";
+      value = "caffeine.ai";
+    }];
+    let http_request : IC.http_request_args = {
+      url = "https://api.odin.fun/v1/token/2ip5";
+      max_response_bytes = null;
+      headers;
+      body = null;
+      method = #get;
+      transform = ?{
+        function = transform;
+        context = Blob.fromArray([]);
+      };
+      is_replicated = ?false;
+    };
+    let httpResponse = await (with cycles = 231_000_000_000) IC.http_request(http_request);
+    switch (httpResponse.body.decodeUtf8()) {
+      case (null) { Runtime.trap("empty HTTP response") };
+      case (?decoded) { decoded };
+    }
   };
 
-  // Find a waiting room for the given game type (not created by this player)
+  // ── PvP Rooms ──────────────────────────────────────────────────────────
+
   public query func getWaitingRoom(gameType : Text, excludePlayer : Text) : async ?PvPRoom {
     for ((code, room) in pvpRooms.entries()) {
       if (room.status == "waiting" and room.gameType == gameType and room.player1 != excludePlayer) {
@@ -96,7 +125,6 @@ persistent actor {
     null
   };
 
-  // Create a new PvP room, returns the room code
   public shared func createPvPRoom(player1 : Text, gameType : Text, initialState : Text) : async Text {
     let code = generateRoomCode();
     let room : PvPRoom = {
@@ -113,22 +141,16 @@ persistent actor {
     code
   };
 
-  // Join an existing room as player2
   public shared func joinPvPRoom(code : Text, player2 : Text) : async Bool {
     switch (pvpRooms.get(code)) {
       case (?room) {
         if (room.status == "waiting") {
-          let updated : PvPRoom = {
-            roomCode = room.roomCode;
-            player1 = room.player1;
+          pvpRooms.add(code, {
+            room with
             player2 = player2;
-            gameType = room.gameType;
-            gameState = room.gameState;
-            currentTurn = room.player1;
             status = "active";
             winner = "";
-          };
-          pvpRooms.add(code, updated);
+          });
           true
         } else {
           false
@@ -138,27 +160,19 @@ persistent actor {
     }
   };
 
-  // Get room state (query - no fee)
   public query func getPvPRoom(code : Text) : async ?PvPRoom {
     pvpRooms.get(code)
   };
 
-  // Update game state after a move
   public shared func updatePvPState(code : Text, playerAddr : Text, newState : Text, nextTurn : Text) : async Bool {
     switch (pvpRooms.get(code)) {
       case (?room) {
         if (room.status == "active" and room.currentTurn == playerAddr) {
-          let updated : PvPRoom = {
-            roomCode = room.roomCode;
-            player1 = room.player1;
-            player2 = room.player2;
-            gameType = room.gameType;
+          pvpRooms.add(code, {
+            room with
             gameState = newState;
             currentTurn = nextTurn;
-            status = room.status;
-            winner = room.winner;
-          };
-          pvpRooms.add(code, updated);
+          });
           true
         } else {
           false
@@ -168,21 +182,15 @@ persistent actor {
     }
   };
 
-  // Finish the game with a winner
   public shared func finishPvPGame(code : Text, winner : Text) : async Bool {
     switch (pvpRooms.get(code)) {
       case (?room) {
-        let updated : PvPRoom = {
-          roomCode = room.roomCode;
-          player1 = room.player1;
-          player2 = room.player2;
-          gameType = room.gameType;
-          gameState = room.gameState;
+        pvpRooms.add(code, {
+          room with
           currentTurn = "";
           status = "finished";
           winner = winner;
-        };
-        pvpRooms.add(code, updated);
+        });
         true
       };
       case null { false };

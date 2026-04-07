@@ -1,56 +1,73 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import type { backendInterface } from "../backend";
-import { createActorWithConfig } from "../config";
-import { useInternetIdentity } from "./useInternetIdentity";
+/**
+ * Local useActor shim for Odin Mario.
+ *
+ * The @caffeineai/core-infrastructure useActor hook requires a createActor
+ * factory function. This shim wraps it with the backend's createActor so all
+ * game components can simply call `useActor()` without arguments.
+ *
+ * Since the backend IDL is currently empty (no canister methods exposed via
+ * bindgen), we return a typed-as-any actor so existing game code that calls
+ * actor.submitScore() etc. compiles without errors and falls back gracefully
+ * at runtime when the canister is not available.
+ */
 
-const ACTOR_QUERY_KEY = "actor";
-export function useActor() {
-  const { identity } = useInternetIdentity();
-  const queryClient = useQueryClient();
-  const actorQuery = useQuery<backendInterface>({
-    queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
-    queryFn: async () => {
-      const isAuthenticated = !!identity;
+import { createActorWithConfig } from "@caffeineai/core-infrastructure";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createActor } from "../backend";
 
-      if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
-        return await createActorWithConfig();
-      }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyActor = any;
 
-      const actorOptions = {
-        agentOptions: {
-          identity,
-        },
-      };
+interface UseActorResult {
+  actor: AnyActor | null;
+  isFetching: boolean;
+}
 
-      const actor = await createActorWithConfig(actorOptions);
-      return actor;
-    },
-    // Only refetch when identity changes
-    staleTime: Number.POSITIVE_INFINITY,
-    // This will cause the actor to be recreated when the identity changes
-    enabled: true,
-  });
+let cachedActor: AnyActor | null = null;
+let cachePromise: Promise<AnyActor | null> | null = null;
 
-  // When the actor changes, invalidate dependent queries
-  useEffect(() => {
-    if (actorQuery.data) {
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return !query.queryKey.includes(ACTOR_QUERY_KEY);
-        },
-      });
-      queryClient.refetchQueries({
-        predicate: (query) => {
-          return !query.queryKey.includes(ACTOR_QUERY_KEY);
-        },
-      });
+async function resolveActor(): Promise<AnyActor | null> {
+  if (cachedActor) return cachedActor;
+  if (cachePromise) return cachePromise;
+
+  cachePromise = createActorWithConfig(
+    createActor as Parameters<typeof createActorWithConfig>[0],
+  )
+    .then((a) => {
+      cachedActor = a;
+      return a;
+    })
+    .catch(() => null);
+
+  return cachePromise;
+}
+
+export function useActor(): UseActorResult {
+  const [actor, setActor] = useState<AnyActor | null>(cachedActor);
+  const [isFetching, setIsFetching] = useState(!cachedActor);
+  const mountedRef = useRef(true);
+
+  const init = useCallback(async () => {
+    if (cachedActor) {
+      setActor(cachedActor);
+      setIsFetching(false);
+      return;
     }
-  }, [actorQuery.data, queryClient]);
+    setIsFetching(true);
+    const a = await resolveActor();
+    if (mountedRef.current) {
+      setActor(a);
+      setIsFetching(false);
+    }
+  }, []);
 
-  return {
-    actor: actorQuery.data || null,
-    isFetching: actorQuery.isFetching,
-  };
+  useEffect(() => {
+    mountedRef.current = true;
+    init();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [init]);
+
+  return { actor, isFetching };
 }

@@ -8,7 +8,7 @@
 
 import { Actor, HttpAgent, type HttpAgentOptions, type ActorConfig, type Agent, type ActorSubclass } from "@icp-sdk/core/agent";
 import type { Principal } from "@icp-sdk/core/principal";
-import { idlFactory, type _SERVICE, type PvPRoom as PvPRoomCandid } from "./declarations/backend.did";
+import { idlFactory, type _SERVICE } from "./declarations/backend.did";
 export interface Some<T> {
     __kind__: "Some";
     value: T;
@@ -89,37 +89,52 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
 export interface ScoreEntry {
     score: bigint;
     playerName: string;
 }
 export interface PvPRoom {
-    roomCode: string;
-    player1: string;
-    player2: string;
-    gameType: string;
-    gameState: string;
-    currentTurn: string;
     status: string;
     winner: string;
+    currentTurn: string;
+    player1: string;
+    player2: string;
+    gameState: string;
+    gameType: string;
+    roomCode: string;
+}
+export interface http_header {
+    value: string;
+    name: string;
+}
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
 }
 export interface backendInterface {
     clearLeaderboard(): Promise<void>;
-    getTop10Scores(): Promise<Array<ScoreEntry>>;
-    submitScore(playerName: string, score: bigint): Promise<void>;
-    getTokenStatsJson(): Promise<string>;
     createPvPRoom(player1: string, gameType: string, initialState: string): Promise<string>;
-    joinPvPRoom(code: string, player2: string): Promise<boolean>;
-    getPvPRoom(code: string): Promise<Option<PvPRoom>>;
-    updatePvPState(code: string, playerAddr: string, newState: string, nextTurn: string): Promise<boolean>;
     finishPvPGame(code: string, winner: string): Promise<boolean>;
+    getPvPRoom(code: string): Promise<PvPRoom | null>;
+    getTokenStatsJson(): Promise<string>;
+    getTop10Scores(): Promise<Array<ScoreEntry>>;
+    getWaitingRoom(gameType: string, excludePlayer: string): Promise<PvPRoom | null>;
+    joinPvPRoom(code: string, player2: string): Promise<boolean>;
+    submitScore(playerName: string, score: bigint): Promise<void>;
+    transform(input: TransformationInput): Promise<TransformationOutput>;
+    updatePvPState(code: string, playerAddr: string, newState: string, nextTurn: string): Promise<boolean>;
 }
-
-function candidOptToOption<T>(candidOpt: [] | [T]): Option<T> {
-    if (candidOpt.length === 0) return { __kind__: "None" };
-    return { __kind__: "Some", value: candidOpt[0] };
-}
-
+import type { PvPRoom as _PvPRoom } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async clearLeaderboard(): Promise<void> {
@@ -129,10 +144,66 @@ export class Backend implements backendInterface {
                 return result;
             } catch (e) {
                 this.processError(e);
-                throw new Error('unreachable');
+                throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.clearLeaderboard();
+            return result;
+        }
+    }
+    async createPvPRoom(arg0: string, arg1: string, arg2: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createPvPRoom(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createPvPRoom(arg0, arg1, arg2);
+            return result;
+        }
+    }
+    async finishPvPGame(arg0: string, arg1: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.finishPvPGame(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.finishPvPGame(arg0, arg1);
+            return result;
+        }
+    }
+    async getPvPRoom(arg0: string): Promise<PvPRoom | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPvPRoom(arg0);
+                return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPvPRoom(arg0);
+            return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getTokenStatsJson(): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getTokenStatsJson();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getTokenStatsJson();
             return result;
         }
     }
@@ -150,6 +221,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getWaitingRoom(arg0: string, arg1: string): Promise<PvPRoom | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWaitingRoom(arg0, arg1);
+                return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWaitingRoom(arg0, arg1);
+            return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async joinPvPRoom(arg0: string, arg1: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.joinPvPRoom(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.joinPvPRoom(arg0, arg1);
+            return result;
+        }
+    }
     async submitScore(arg0: string, arg1: bigint): Promise<void> {
         if (this.processError) {
             try {
@@ -164,80 +263,37 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getTokenStatsJson(): Promise<string> {
+    async transform(arg0: TransformationInput): Promise<TransformationOutput> {
         if (this.processError) {
             try {
-                return await this.actor.getTokenStatsJson();
+                const result = await this.actor.transform(arg0);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            return await this.actor.getTokenStatsJson();
+            const result = await this.actor.transform(arg0);
+            return result;
         }
     }
-    async createPvPRoom(player1: string, gameType: string, initialState: string): Promise<string> {
+    async updatePvPState(arg0: string, arg1: string, arg2: string, arg3: string): Promise<boolean> {
         if (this.processError) {
             try {
-                return await this.actor.createPvPRoom(player1, gameType, initialState);
+                const result = await this.actor.updatePvPState(arg0, arg1, arg2, arg3);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            return await this.actor.createPvPRoom(player1, gameType, initialState);
+            const result = await this.actor.updatePvPState(arg0, arg1, arg2, arg3);
+            return result;
         }
     }
-    async joinPvPRoom(code: string, player2: string): Promise<boolean> {
-        if (this.processError) {
-            try {
-                return await this.actor.joinPvPRoom(code, player2);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            return await this.actor.joinPvPRoom(code, player2);
-        }
-    }
-    async getPvPRoom(code: string): Promise<Option<PvPRoom>> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getPvPRoom(code);
-                return candidOptToOption(result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getPvPRoom(code);
-            return candidOptToOption(result);
-        }
-    }
-    async updatePvPState(code: string, playerAddr: string, newState: string, nextTurn: string): Promise<boolean> {
-        if (this.processError) {
-            try {
-                return await this.actor.updatePvPState(code, playerAddr, newState, nextTurn);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            return await this.actor.updatePvPState(code, playerAddr, newState, nextTurn);
-        }
-    }
-    async finishPvPGame(code: string, winner: string): Promise<boolean> {
-        if (this.processError) {
-            try {
-                return await this.actor.finishPvPGame(code, winner);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            return await this.actor.finishPvPGame(code, winner);
-        }
-    }
+}
+function from_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PvPRoom]): PvPRoom | null {
+    return value.length === 0 ? null : value[0];
 }
 export interface CreateActorOptions {
     agent?: Agent;

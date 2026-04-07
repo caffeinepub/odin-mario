@@ -7,29 +7,48 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
 export interface ScoreEntry {
     score: bigint;
     playerName: string;
 }
 export interface PvPRoom {
-    roomCode: string;
-    player1: string;
-    player2: string;
-    gameType: string;
-    gameState: string;
-    currentTurn: string;
     status: string;
     winner: string;
+    currentTurn: string;
+    player1: string;
+    player2: string;
+    gameState: string;
+    gameType: string;
+    roomCode: string;
+}
+export interface http_header {
+    value: string;
+    name: string;
+}
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
 }
 export interface backendInterface {
-    getTop10Scores(): Promise<Array<ScoreEntry>>;
-    submitScore(playerName: string, score: bigint): Promise<void>;
-    getTokenStatsJson(): Promise<string>;
     clearLeaderboard(): Promise<void>;
     createPvPRoom(player1: string, gameType: string, initialState: string): Promise<string>;
-    joinPvPRoom(code: string, player2: string): Promise<boolean>;
-    getPvPRoom(code: string): Promise<Option<PvPRoom>>;
-    updatePvPState(code: string, playerAddr: string, newState: string, nextTurn: string): Promise<boolean>;
     finishPvPGame(code: string, winner: string): Promise<boolean>;
-    getWaitingRoom(gameType: string, excludePlayer: string): Promise<Option<PvPRoom>>;
+    getPvPRoom(code: string): Promise<PvPRoom | null>;
+    getTokenStatsJson(): Promise<string>;
+    getTop10Scores(): Promise<Array<ScoreEntry>>;
+    getWaitingRoom(gameType: string, excludePlayer: string): Promise<PvPRoom | null>;
+    joinPvPRoom(code: string, player2: string): Promise<boolean>;
+    submitScore(playerName: string, score: bigint): Promise<void>;
+    transform(input: TransformationInput): Promise<TransformationOutput>;
+    updatePvPState(code: string, playerAddr: string, newState: string, nextTurn: string): Promise<boolean>;
 }

@@ -8,61 +8,119 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const PvPRoom = IDL.Record({
+  'status' : IDL.Text,
+  'winner' : IDL.Text,
+  'currentTurn' : IDL.Text,
+  'player1' : IDL.Text,
+  'player2' : IDL.Text,
+  'gameState' : IDL.Text,
+  'gameType' : IDL.Text,
+  'roomCode' : IDL.Text,
+});
 export const ScoreEntry = IDL.Record({
   'score' : IDL.Nat,
   'playerName' : IDL.Text,
 });
-
-export const PvPRoom = IDL.Record({
-  'roomCode' : IDL.Text,
-  'player1' : IDL.Text,
-  'player2' : IDL.Text,
-  'gameType' : IDL.Text,
-  'gameState' : IDL.Text,
-  'currentTurn' : IDL.Text,
-  'status' : IDL.Text,
-  'winner' : IDL.Text,
+export const http_header = IDL.Record({
+  'value' : IDL.Text,
+  'name' : IDL.Text,
+});
+export const http_request_result = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
+export const TransformationInput = IDL.Record({
+  'context' : IDL.Vec(IDL.Nat8),
+  'response' : http_request_result,
+});
+export const TransformationOutput = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
 });
 
 export const idlService = IDL.Service({
   'clearLeaderboard' : IDL.Func([], [], []),
-  'getTop10Scores' : IDL.Func([], [IDL.Vec(ScoreEntry)], ['query']),
-  'submitScore' : IDL.Func([IDL.Text, IDL.Nat], [], []),
-  'getTokenStatsJson' : IDL.Func([], [IDL.Text], []),
   'createPvPRoom' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Text], []),
-  'joinPvPRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
-  'getPvPRoom' : IDL.Func([IDL.Text], [IDL.Opt(PvPRoom)], ['query']),
-  'getWaitingRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(PvPRoom)], ['query']),
-  'updatePvPState' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [IDL.Bool], []),
   'finishPvPGame' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'getPvPRoom' : IDL.Func([IDL.Text], [IDL.Opt(PvPRoom)], ['query']),
+  'getTokenStatsJson' : IDL.Func([], [IDL.Text], []),
+  'getTop10Scores' : IDL.Func([], [IDL.Vec(ScoreEntry)], ['query']),
+  'getWaitingRoom' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Opt(PvPRoom)],
+      ['query'],
+    ),
+  'joinPvPRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'submitScore' : IDL.Func([IDL.Text, IDL.Nat], [], []),
+  'transform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
+      ['query'],
+    ),
+  'updatePvPState' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Bool],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
-  const ScoreEntry = IDL.Record({ 'score' : IDL.Nat, 'playerName' : IDL.Text });
   const PvPRoom = IDL.Record({
-    'roomCode' : IDL.Text,
-    'player1' : IDL.Text,
-    'player2' : IDL.Text,
-    'gameType' : IDL.Text,
-    'gameState' : IDL.Text,
-    'currentTurn' : IDL.Text,
     'status' : IDL.Text,
     'winner' : IDL.Text,
+    'currentTurn' : IDL.Text,
+    'player1' : IDL.Text,
+    'player2' : IDL.Text,
+    'gameState' : IDL.Text,
+    'gameType' : IDL.Text,
+    'roomCode' : IDL.Text,
+  });
+  const ScoreEntry = IDL.Record({ 'score' : IDL.Nat, 'playerName' : IDL.Text });
+  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+  const http_request_result = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
+  const TransformationInput = IDL.Record({
+    'context' : IDL.Vec(IDL.Nat8),
+    'response' : http_request_result,
+  });
+  const TransformationOutput = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
   });
   
   return IDL.Service({
     'clearLeaderboard' : IDL.Func([], [], []),
-    'getTop10Scores' : IDL.Func([], [IDL.Vec(ScoreEntry)], ['query']),
-    'submitScore' : IDL.Func([IDL.Text, IDL.Nat], [], []),
-    'getTokenStatsJson' : IDL.Func([], [IDL.Text], []),
     'createPvPRoom' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [IDL.Text], []),
-    'joinPvPRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
-    'getPvPRoom' : IDL.Func([IDL.Text], [IDL.Opt(PvPRoom)], ['query']),
-    'getWaitingRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(PvPRoom)], ['query']),
-    'updatePvPState' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [IDL.Bool], []),
     'finishPvPGame' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'getPvPRoom' : IDL.Func([IDL.Text], [IDL.Opt(PvPRoom)], ['query']),
+    'getTokenStatsJson' : IDL.Func([], [IDL.Text], []),
+    'getTop10Scores' : IDL.Func([], [IDL.Vec(ScoreEntry)], ['query']),
+    'getWaitingRoom' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Opt(PvPRoom)],
+        ['query'],
+      ),
+    'joinPvPRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'submitScore' : IDL.Func([IDL.Text, IDL.Nat], [], []),
+    'transform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
+        ['query'],
+      ),
+    'updatePvPState' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Bool],
+        [],
+      ),
   });
 };
 
