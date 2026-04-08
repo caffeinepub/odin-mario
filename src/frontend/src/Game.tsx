@@ -1872,6 +1872,7 @@ export default function Game({
   onLaunchPvPFighting: _onLaunchPvPFighting,
   onLaunchChessPvP,
   onLaunchPenalty,
+  onLaunchOdin0401,
   onLogout,
   walletAddress,
 }: {
@@ -1886,6 +1887,7 @@ export default function Game({
   onLaunchPvPFighting?: () => void;
   onLaunchChessPvP?: () => void;
   onLaunchPenalty?: () => void;
+  onLaunchOdin0401?: () => void;
   onLogout?: () => void;
   walletAddress?: string;
 }) {
@@ -4531,6 +4533,98 @@ export default function Game({
                     onClick={(e) => {
                       e.stopPropagation();
                       onLaunchBabyOdin?.();
+                    }}
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                      color: "#1a0a00",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px 20px",
+                      fontFamily: "'Bricolage Grotesque',sans-serif",
+                      fontWeight: 900,
+                      fontSize: 12,
+                      letterSpacing: 1,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 12px rgba(255,165,0,0.6)",
+                    }}
+                  >
+                    ▶ PLAY NOW
+                  </button>
+                </div>
+
+                {/* ODIN 0401 Card */}
+                <div
+                  style={{
+                    flex: "1 1 200px",
+                    maxWidth: 240,
+                    background:
+                      "linear-gradient(135deg, rgba(0,5,30,0.9) 0%, rgba(10,20,60,0.85) 50%, rgba(0,5,30,0.9) 100%)",
+                    border: "2px solid #FFD700",
+                    borderRadius: 16,
+                    padding: "16px 12px",
+                    cursor: "pointer",
+                    position: "relative",
+                    overflow: "hidden",
+                    boxShadow:
+                      "0 0 20px rgba(255,215,0,0.6), 0 4px 24px rgba(0,0,0,0.4)",
+                    textAlign: "center",
+                    transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                  onClick={() => onLaunchOdin0401?.()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onLaunchOdin0401?.();
+                  }}
+                >
+                  <div style={{ fontSize: 50, marginBottom: 6, lineHeight: 1 }}>
+                    ⚔️
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Bricolage Grotesque',sans-serif",
+                      color: "#FFD700",
+                      fontSize: 16,
+                      fontWeight: 900,
+                      letterSpacing: 2,
+                      marginBottom: 4,
+                      textShadow: "0 0 10px rgba(255,215,0,0.8)",
+                    }}
+                  >
+                    ODIN 0401
+                  </div>
+                  <div
+                    style={{
+                      background: "rgba(255,0,50,0.2)",
+                      border: "1px solid rgba(255,50,50,0.5)",
+                      borderRadius: 6,
+                      padding: "2px 8px",
+                      fontSize: 9,
+                      color: "#ff8888",
+                      fontFamily: "'Press Start 2P', monospace",
+                      marginBottom: 8,
+                      display: "inline-block",
+                    }}
+                  >
+                    🔥 COMMUNITY DEFENSE
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "#ffe580",
+                      fontFamily: "'Figtree',sans-serif",
+                      marginBottom: 12,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    41 BTC stolen. Fight back! Choose your warrior and recover
+                    what was taken from odin.fun.
+                  </div>
+                  <button
+                    type="button"
+                    data-ocid="odin0401.card_play_button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onLaunchOdin0401?.();
                     }}
                     style={{
                       background:

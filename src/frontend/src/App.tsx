@@ -5,6 +5,7 @@ import Chess from "./Chess";
 import ChessPvP from "./ChessPvP";
 import Contra from "./Contra";
 import Game from "./Game";
+import Odin0401 from "./Odin0401";
 import OdinSpace from "./OdinSpace";
 import OdinWarrior from "./OdinWarrior";
 import PacMan from "./PacMan";
@@ -30,7 +31,8 @@ type Screen =
   | "odinspace"
   | "pvpfighting"
   | "chesspvp"
-  | "penalty";
+  | "penalty"
+  | "odin0401";
 
 type WalletType = "unisat" | "xverse" | "okx" | "plug" | null;
 
@@ -530,6 +532,8 @@ export default function App() {
         playerAddress={walletInfo?.address}
       />
     );
+  } else if (screen === "odin0401") {
+    screenContent = <Odin0401 onBack={() => setScreen("mario")} />;
   } else {
     screenContent = (
       <Game
@@ -544,6 +548,7 @@ export default function App() {
         onLaunchPvPFighting={() => setScreen("pvpfighting")}
         onLaunchChessPvP={() => setScreen("chesspvp")}
         onLaunchPenalty={() => setScreen("penalty")}
+        onLaunchOdin0401={() => setScreen("odin0401")}
         onLogout={walletInfo ? handleDisconnect : undefined}
         walletAddress={walletInfo?.address}
       />
